@@ -56,4 +56,6 @@ Strike Price        $100.0000
 Binomial Price      $5.4321
 
 Put-Call Parity: Verified
-🛠 Project Structuretree_engine(): The core logic that builds the Stock Price tree and performs backward induction for the Option Value.check_parity(): Verifies $C - P = S_0 - K e^{-rT}$ (valid for European options).plot_option_tree(): Visualizes the nodes and values using Matplotlib.📝 LicenseThis project is open-source and available for educational purposes.
+🛠 Project Structuretree_engine(): The core logic that builds the Stock Price tree and performs backward induction for the Option Value.
+check_parity(): Verifies $C - P = S_0 - K e^{-rT}$ (valid for European options).plot_option_tree(): Visualizes the nodes and values using Matplotlib.
+📝 LicenseThis project is open-source and available for educational purposes.
