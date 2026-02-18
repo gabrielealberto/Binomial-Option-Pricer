@@ -1,61 +1,145 @@
-# Binomial-Option-Pricer
-This notebook implements the Cox-Ross-Rubinstein (CRR) binomial tree method to value equity options. It supports both European and American exercise styles (Calls &amp; Puts) and includes tools to visualize the backward induction process through an interactive value tree.
+# Binomial Option Pricer (CRR)
 
-# Binomial Option Pricer 📈
+Vectorized implementation of the **Cox-Ross-Rubinstein (CRR)** binomial model for pricing European and American options using real market data.
 
-A Python implementation of the **Cox-Ross-Rubinstein (CRR) Binomial Model** for pricing equity options. This notebook supports both **European** and **American** style options (Calls and Puts) and includes visualization tools to display the option value propagation through the binomial tree.
+The project focuses on **algorithmic efficiency**, replacing the traditional full-tree construction with a memory-optimized approach that stores only the nodes required during backward induction.
 
-## 🚀 Features
+Originally implemented with nested loops and a full price matrix, the pricer was later redesigned using vectorized operations, reducing memory complexity from **O(n²) to O(n)** and significantly improving performance.
 
-* **Valuation Model:** Uses the CRR Binomial Tree method to calculate option premiums.
-* **Option Styles:**
-    * 🇪🇺 **European:** Exercisable only at maturity.
-    * 🇺🇸 **American:** Exercisable at any step (checks for early exercise optimality).
-* **Option Types:** Call and Put.
-* **Visualization:** Generates a visual tree diagram of option values to trace backward induction.
-* **Validation:** Includes **Put-Call Parity** check for European options to verify theoretical consistency.
+---
 
-## 🧮 Mathematical Background
+## Overview
 
-The model discretizes the time to maturity $T$ into $N$ steps of length $\Delta t$.
-The asset price moves up by a factor $u$ or down by a factor $d$ at each step:
+This pricer:
 
-$$u = e^{\sigma \sqrt{\Delta t}}, \quad d = \frac{1}{u}$$
+- Prices **European and American calls and puts**
+- Uses **real market data** via `yfinance`
+- Estimates **historical volatility**
+- Includes a **continuous dividend yield**
+- Verifies **put–call parity** for European options
+- Avoids constructing the full binomial tree
 
-The risk-neutral probability $p$ is calculated as:
+The model has been tested on **equity data** and is currently intended for stocks rather than commodities, which typically require additional modeling assumptions such as storage costs or convenience yields.
 
-$$p = \frac{e^{r \Delta t} - d}{u - d}$$
+---
 
-For **American options**, at each node $t < T$, the algorithm checks for early exercise:
-$$V_{t} = \max(\text{Continuation Value}, \text{Intrinsic Value})$$
+## Model
 
-## 📦 Requirements
+The binomial framework assumes that over a short time interval Δt, the asset price moves either up or down:
 
-To run this notebook, you need Python installed along with the following libraries:
+u = e^(σ√Δt)
+d = 1/u
 
-* `numpy` (for math operations)
-* `matplotlib` (for tree visualization)
-* `yfinance` (optional, for fetching real market data)
 
-You can install them via pip:
+Risk-neutral probability:
+
+p = (e^{(r-q)Δt} - d) / (u - d)
+
+
+Option values are computed through backward induction:
+
+V = e^{-rΔt} (pV_up + (1-p)V_down)
+
+
+American options are handled by comparing the continuation value with immediate exercise at each node.
+
+---
+
+## Data Pipeline
+
+Market data is downloaded twice:
+
+- **Adjusted prices** → used for volatility estimation  
+- **Non-adjusted prices** → used for the current spot price  
+
+Adjusted prices incorporate corporate actions such as splits and dividends, producing more consistent return series, while the non-adjusted close reflects the actual traded market price.
+
+---
+
+## Algorithmic Design
+
+Traditional binomial implementations construct a full `(n+1) × (n+1)` tree.
+
+This project avoids that by:
+
+- computing only terminal nodes  
+- shrinking the value vector during backward induction  
+- generating intermediate prices on demand (for American exercise)  
+
+Result:
+
+Memory: O(n²) → O(n)
+
+
+This makes the pricer scalable and significantly faster for large step counts.
+
+---
+
+## User Parameters
+
+| Variable | Description |
+|--------|-------------|
+| `ticker` | Underlying asset |
+| `s0` | Spot price |
+| `k` | Strike price |
+| `n` | Number of binomial steps |
+| `t` | Time to maturity (days) |
+| `r` | Risk-free rate |
+| `q` | Dividend yield |
+| `opttype` | Call (`c`) or Put (`p`) |
+| `option_style` | European (`eu`) or American (`am`) |
+
+These inputs allow the model to adapt to different pricing scenarios.
+
+---
+
+## Example Output
+
+Option Style: European
+Actual underlying price: 263.88 USD
+Dividend Yield used: 0.39%
+Option type: Call
+Strike price: 271.7964 USD
+Binomial Call option price: 19.1419 USD
+Call-put parity verified
+
+
+For European options, the parity check acts as a numerical consistency test for the implementation.
+
+---
+
+## Installation
+
+Install the required dependencies:
 
 ```bash
-pip install numpy matplotlib yfinance
-💻 UsageOpen Binomial_Asset_Pricer.ipynb in Jupyter Notebook or Google Colab.Configure the input parameters in the setup cell:Python# Example Parameters
-s0 = 100       # Current asset price
-k = 100        # Strike price
-t = 1          # Time to maturity (years)
-r = 0.05       # Risk-free interest rate
-sigma = 0.2    # Volatility
-n = 10         # Number of binomial steps
+pip install numpy pandas yfinance
+```
+Usage
+Run the pricer from the command line:
 
-opttype = 'c'        # 'c' for Call, 'p' for Put
-option_style = 'am'  # 'am' for American, 'eu' for European
-Run the cells to calculate the price and visualize the tree.Example OutputPlaintextOption Type         Put
-Strike Price        $100.0000
-Binomial Price      $5.4321
+python Vectorized_pricer.py
+Model parameters (ticker, strike, maturity, etc.) can be modified directly at the top of the script to test different pricing scenarios.
 
-Put-Call Parity: Verified
-🛠 Project Structuretree_engine(): The core logic that builds the Stock Price tree and performs backward induction for the Option Value.
-check_parity(): Verifies $C - P = S_0 - K e^{-rT}$ (valid for European options).plot_option_tree(): Visualizes the nodes and values using Matplotlib.
-📝 LicenseThis project is open-source and available for educational purposes.
+Model Scope
+The pricer has been tested on equity data and is currently designed for stocks.
+Extending the framework to commodities would require additional modeling assumptions, such as storage costs or convenience yields.
+
+Key Assumptions
+Dividends are modeled as a continuous yield
+
+Volatility is estimated from historical returns
+
+The model follows the standard CRR recombining tree structure
+
+These assumptions keep the implementation tractable while remaining consistent with common practice in binomial pricing.
+
+```bash
+Project Structure
+.
+├── Binomial_options_pricer.py   # Main pricing script
+├── Report.pdf
+└── README.md
+```
+Author
+Gabriele Alberto
